@@ -25,7 +25,12 @@ Some factors affecting performance that I want to test include:
 * depth of crawl
 * "size" of webpage (word count?)
 
-
+### Measuring Success
+I feel that this project would be successful if complete benchmarks comparing each implementation
+of web crawling are made, as well as having good clean code. Being optimistic, learning of each
+of these approaches will keep me aware of the benefits and limitations of each implementation,
+as well as being able to code the "ever-awesome" concept of actors on other programming 
+problems I will encounter in the future.
 
 
 
