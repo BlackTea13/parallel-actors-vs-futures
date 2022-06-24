@@ -1,4 +1,7 @@
 # parallel-ventriloquist-duel
+
+~~_a actor using a thread fights for his future_~~
+
 A repository for me to dive into Scala's parallel programming approaches.
 Consisting of pure threads, actors, futures, and possibly more!
 
