@@ -3,9 +3,11 @@ import akka.actor.typed.ActorSystem
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
 
-object main {
+import scala.language.implicitConversions
 
-  def main(args: Array[String]) = {
-    println("Hello World!!")
-  }
+object main extends App {
+  val START_LINK = "https://cs.muic.mahidol.ac.th/courses/ooc/api"
+
+  val futureWS = FutureCrawler.crawlForStats(START_LINK)
+  println(futureWS)
 }
