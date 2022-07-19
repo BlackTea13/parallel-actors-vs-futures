@@ -11,4 +11,4 @@ project/target/
 target/
 
 # mac
-.DS_Store
+*.DS_Store
