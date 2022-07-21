@@ -13,8 +13,7 @@ lazy val root = (project in file("."))
 
 libraryDependencies ++= Seq(
   "org.jsoup" % "jsoup" % "1.14.3",
-  "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
-  "ch.qos.logback" % "logback-classic" % "1.2.11",
-  "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
-  "org.scalatest" %% "scalatest" % "3.2.12" % Test
+  "com.typesafe.akka" %% "akka-actor" % akkaVersion,
+  "com.typesafe.akka" %% "akka-testkit" % akkaVersion,
+  "org.scalatest" %% "scalatest" % "3.2.12"
 )
