@@ -24,6 +24,7 @@ object ActorCrawler {
   private val extMap: mutable.Map[String, Int] = TrieMap[String, Int]()
   private val urlMapNonHtml: mutable.Map[String, Int] = TrieMap[String, Int]()
   private var basePath: String = ""
+  private var completeCheckPasses = 0
 
   def crawlForStats(basePath: String) = {
     this.basePath = basePath
@@ -31,8 +32,11 @@ object ActorCrawler {
     import Master._
     val system = ActorSystem("system")
     val master = system.actorOf(Props(new Master), "robMaster")
-    implicit val timeout: Timeout = Timeout(100.seconds)
     master ! Start
+
+    system.scheduler.schedule(1.second, 200.millis) {
+      master ! CompletionCheck
+    }
   }
 
   private def createWebStats(links: Set[String]) : WebStats = {
@@ -45,7 +49,7 @@ object ActorCrawler {
     case object Start
     case class LinkRequest(ref: ActorRef)
     case class NewUrls(pages: Set[String])
-    case object Complete
+    case object CompletionCheck
   }
   class Master extends Actor with ActorLogging {
     import Master._
@@ -78,8 +82,20 @@ object ActorCrawler {
         logger.info("received {}", newLinks.size)
         p += newLinks.size
 
-      case Complete =>
-        println(createWebStats(visited.toSet))
+        /*
+        This is definitely not the way to do it but I didn't have enough time
+        to learn the way I think you're supposed to do it with the "Ask Pattern"
+        */
+      case CompletionCheck =>
+        if pending.isEmpty then
+          if completeCheckPasses + 1 == 5 then
+            val ws = createWebStats(visited.toSet)
+            println(ws)
+            context.stop(self)
+          else
+            completeCheckPasses += 1
+        else
+          completeCheckPasses = 0
     }
   }
 
