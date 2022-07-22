@@ -1,4 +1,5 @@
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, DeadLetter, Props}
+import akka.actor.Status.{Failure, Success}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, DeadLetter, PoisonPill, Props, Timers}
 import akka.event.Logging
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
@@ -14,9 +15,7 @@ import scala.collection.mutable
 import collection.JavaConverters.*
 import scala.annotation.tailrec
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-
-
+import scala.concurrent.duration.*
 
 object ActorCrawler {
   private val numFiles: AtomicInteger = AtomicInteger(0)
@@ -24,63 +23,74 @@ object ActorCrawler {
   private val extMap: mutable.Map[String, Int] = TrieMap[String, Int]()
   private val urlMapNonHtml: mutable.Map[String, Int] = TrieMap[String, Int]()
   private var basePath: String = ""
-  private var completeCheckPasses = 0
+  private var start = 0L
+  private var end = 0L
+  
 
-  def crawlForStats(basePath: String) = {
-    this.basePath = basePath
-
+  case object TimerKey
+  case class StartCrawl(basePath: String)
+  class test extends Actor with Timers with ActorLogging {
     import Master._
-    val system = ActorSystem("system")
-    val master = system.actorOf(Props(new Master), "robMaster")
-    master ! Start
 
-    system.scheduler.schedule(1.second, 200.millis) {
-      master ! CompletionCheck
+    var ws: WebStats = WebStats(0, 0, Map(), 0)
+    var requester: ActorRef = null
+    val master: ActorRef = context.actorOf(Props(classOf[Master]), "MasterCrawler")
+    override def receive: Receive = {
+      case StartCrawl(path) =>
+        requester = sender()
+        basePath = path
+        timers.startPeriodicTimer(TimerKey, "check", 1.seconds)
+        master ! Start
+      case "check" =>
+        master ! CompletionCheck
+      case Completed(ws) =>
+        log.info("Crawl completed!")
+        requester ! ws
+        timers.cancel(TimerKey)
+        context.stop(self)
     }
   }
 
-  private def createWebStats(links: Set[String]) : WebStats = {
-    val mapExtensions_ = extMap.toMap + ("html" -> links.size)
-    WebStats(links.size, extMap.keySet.size, mapExtensions_, numWords.get())
-  }
-
-
   object Master {
     case object Start
-    case class LinkRequest(ref: ActorRef)
+    case object LinkRequest
     case class NewUrls(pages: Set[String])
     case object CompletionCheck
+    case class Completed(ws: WebStats)
   }
   class Master extends Actor with ActorLogging {
     import Master._
     import Worker._
 
-    val visited = mutable.Set[String]()
-    val pending = mutable.Queue[String]()
-
-    val logger = Logging(context.system, this)
-    val numWorkers = 32
-    val workers = Array.fill(numWorkers) { context.actorOf(Props(new Worker))}
-
-    var originalSender: ActorRef = ActorRef.noSender
+    var requester: Option[ActorRef] = None
+    val visited: mutable.Set[String] = mutable.Set[String]()
+    val pending: mutable.Queue[String] = mutable.Queue[String]()
+    val numWorkers = 24
+    val workers: Array[ActorRef] = Array.fill(numWorkers) { context.actorOf(Props(classOf[Worker]))}
+    var completeCheckPasses = 0
     override def receive: Receive = {
       case Start =>
-        originalSender = sender()
-        pending += basePath
-        workers.foreach(_ ! WorkToDo)
-
-      case LinkRequest(ref) =>
+        requester = Some(sender())
+        try {
+          Jsoup.connect(basePath)
+          pending += basePath
+          workers.foreach(_ ! WorkToDo)
+        } catch {
+          case e : Exception =>
+            log.warning("error encountered")
+            sender() ! Failure(e)
+        }
+        
+      case LinkRequest =>
         if pending.nonEmpty then
           val page = pending.dequeue()
           visited += page
-          ref ! ProcessPage(page)
+          sender() ! ProcessPage(page)
 
       case NewUrls(pages) =>
         val newLinks = pages.filter(page => !(visited.contains(page) || pending.contains(page)))
         pending ++= newLinks
         workers.foreach(_ ! WorkToDo)
-        logger.info("received {}", newLinks.size)
-        p += newLinks.size
 
         /*
         This is definitely not the way to do it but I didn't have enough time
@@ -89,8 +99,9 @@ object ActorCrawler {
       case CompletionCheck =>
         if pending.isEmpty then
           if completeCheckPasses + 1 == 5 then
-            val ws = createWebStats(visited.toSet)
-            println(ws)
+            val ws : WebStats = createWebStats(visited.toSet)
+            println(s"work: $ws")
+            requester.get ! Completed(ws)
             context.stop(self)
           else
             completeCheckPasses += 1
@@ -98,21 +109,16 @@ object ActorCrawler {
           completeCheckPasses = 0
     }
   }
-
-  var p = 0
-
   object Worker {
     case object WorkToDo
     case class ProcessPage(link: String)
   }
-  class Worker extends Actor{
+  class Worker extends Actor with ActorLogging {
     import Master._
     import Worker._
-    val logger = Logging(context.system, this)
-
     override def receive: Receive = {
       case WorkToDo =>
-        sender() ! LinkRequest(context.self)
+        sender() ! LinkRequest
 
       case ProcessPage(link) =>
         val links = extractLinks(link)
@@ -162,6 +168,8 @@ object ActorCrawler {
     }
   }
 
-
-  
+  private def createWebStats(links: Set[String]) : WebStats = {
+    val mapExtensions_ = extMap.toMap + ("html" -> links.size)
+    WebStats(links.size, extMap.keySet.size, mapExtensions_, numWords.get())
+  }
 }
