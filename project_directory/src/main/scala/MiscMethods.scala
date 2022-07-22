@@ -5,11 +5,11 @@ import concurrent.ExecutionContext.Implicits.global
 
 object MiscMethods {
 
-  def timed(F: String => WebStats, startLink: String) = {
+  def timed(F: String => Any, startLink: String) = {
     val start = System.nanoTime()
     val result = F(startLink)
     val end = System.nanoTime()
-    (end - start)/1e9d
+    (result, (end - start)/1e9d)
   }
 
   def isWord(word: String): Boolean = {
