@@ -97,7 +97,7 @@ object FutureCrawler {
    */
   private def createWebStats(links: Set[String]) : WebStats = {
     val mapExtensions_ = extMap.toMap + ("html" -> links.size)
-    WebStats(links.size, extMap.keySet.size, mapExtensions_, numWords.get())
+    WebStats(links.size + extMap.valuesIterator.sum, extMap.keySet.size, mapExtensions_, numWords.get())
   }
 
 }
