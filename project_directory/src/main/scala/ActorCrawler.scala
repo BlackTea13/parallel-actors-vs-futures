@@ -77,7 +77,7 @@ object ActorCrawler {
           workers.foreach(_ ! WorkToDo)
         } catch {
           case e : Exception =>
-            log.warning("error encountered")
+            log.error("error encountered, could not connect to seed link")
             sender() ! Failure(e)
         }
         
@@ -100,7 +100,6 @@ object ActorCrawler {
         if pending.isEmpty then
           if completeCheckPasses + 1 == 5 then
             val ws : WebStats = createWebStats(visited.toSet)
-            println(s"work: $ws")
             requester.get ! Completed(ws)
             context.stop(self)
           else
