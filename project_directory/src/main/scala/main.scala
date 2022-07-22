@@ -13,15 +13,15 @@ object main extends App {
 
     // Actor Crawler
     import ActorCrawler._
-    val start = System.currentTimeMillis()
+    val start = System.nanoTime()
     implicit val timeout: Timeout = Timeout(120.seconds)
     val actorSystem = ActorSystem("ActorCrawlerSystem")
     val requester = actorSystem.actorOf(Props(classOf[ActorCrawler.test]), "RequesterCrawler")
     val ws = requester ? StartCrawl(basePath)
     val result = Await.result(ws, timeout.duration).asInstanceOf[WebStats]
     actorSystem.terminate()
-    val end = System.currentTimeMillis()
-    val timeA = (end - start) / 1000.0
+    val end = System.nanoTime()
+    val timeA = (end - start) / 1e9d
     println(s"Actor Crawler took: $timeA with result: $result")
     Benchmark(timeF, timeA)
   }
@@ -47,6 +47,7 @@ object main extends App {
   }
 
   val TEST_LINK1 = "https://cs.muic.mahidol.ac.th/courses/ooc/api/"
+  val TEST_LINK2 = ""
   runBenchmark(10, TEST_LINK1)
 
 }
