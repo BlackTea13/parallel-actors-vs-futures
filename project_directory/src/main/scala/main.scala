@@ -35,7 +35,15 @@ object main extends App {
     }
     val FMean = results.map(x => x.FuturesTime).sum / results.size
     val AMean = results.map(x => x.ActorsTime).sum / results.size
-    println(s"testing link START: $basePath, Future Mean: $FMean, Actor Mean: $AMean")
+    println(s"testing link START: $basePath \nFuture Mean: $FMean, Actor Mean: $AMean")
+
+    val FStdDev = stdDev(results.map(x => x.FuturesTime), FMean)
+    val AStdDev = stdDev(results.map(x => x.ActorsTime), AMean)
+    println(s"Future stdDev: $FStdDev, Actor stdDev: $AStdDev")
+  }
+
+  def stdDev(xs: List[Double], mean: Double): Double = {
+    math.sqrt(xs.map(x => math.pow(x - mean, 2)).sum / xs.size)
   }
 
   val TEST_LINK1 = "https://cs.muic.mahidol.ac.th/courses/ooc/api/"
