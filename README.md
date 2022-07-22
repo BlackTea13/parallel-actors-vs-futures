@@ -1,4 +1,4 @@
-# parallel-ventriloquist-duel
+# Parellel-WebCrawler-Methods
 
 ~~_a actor using a thread fights for his future_~~
 
