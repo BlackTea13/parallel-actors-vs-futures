@@ -35,6 +35,7 @@ object main extends App {
     }
     val FMean = results.map(x => x.FuturesTime).sum / results.size
     val AMean = results.map(x => x.ActorsTime).sum / results.size
+    println(s"TEST RESULTS ==================================================")
     println(s"testing link START: $basePath \nFuture Mean: $FMean, Actor Mean: $AMean")
 
     val FStdDev = stdDev(results.map(x => x.FuturesTime), FMean)
